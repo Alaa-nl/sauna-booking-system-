@@ -12,13 +12,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // If you're having CORS issues with the backend API
-    proxy: {
-      '/api': {
-        target: 'http://localhost',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
+    host: '0.0.0.0'
   }
 })

@@ -44,6 +44,11 @@
         <button type="submit" class="btn-primary login-btn" :disabled="isLoading">
           {{ isLoading ? 'Logging in...' : 'Login' }}
         </button>
+        
+        <div class="forgot-password">
+          <a href="#">Forgot password?</a>
+          <span class="tooltip">Contact admin to reset your password</span>
+        </div>
       </form>
       
       <div class="login-footer">
@@ -77,6 +82,7 @@ export default {
       
       const authStore = useAuthStore()
       
+      
       authStore.login(this.username, this.password)
         .then(() => {
           this.isLoading = false
@@ -85,15 +91,23 @@ export default {
         })
         .catch((error) => {
           this.isLoading = false
-          this.errorMessage = error.response?.data?.error || 'Invalid username or password'
-          console.log(error)
+          
+          if (error.message === 'Network Error') {
+            this.errorMessage = 'Cannot connect to server. Please check your connection.'
+          } else if (error.response) {
+            // Server responded with error
+            this.errorMessage = error.response.data?.error || 
+                               `Error ${error.response.status}: ${error.response.statusText}`
+          } else {
+            // Default error message
+            this.errorMessage = error.message || 'Invalid username or password'
+          }
         })
     }
   },
   mounted() {
     // Check if already logged in using the auth store
     const authStore = useAuthStore()
-    authStore.autoLogin()
     
     if (authStore.loggedIn) {
       this.$router.push('/employee/dashboard')
@@ -214,5 +228,53 @@ input {
 
 .error-icon {
   font-size: 1.25rem;
+}
+
+.forgot-password {
+  position: relative;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.forgot-password a {
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--text-dark);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--text-dark) transparent transparent transparent;
+}
+
+.forgot-password:hover .tooltip {
+  display: block;
 }
 </style>

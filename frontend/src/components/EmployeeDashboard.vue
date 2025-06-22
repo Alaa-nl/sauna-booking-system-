@@ -2,7 +2,7 @@
   <div class="dashboard">
     <div class="dashboard-header">
       <div class="dashboard-title">
-        <h2>Employee Dashboard</h2>
+        <h2>Welcome, {{ username }}!</h2>
         <p class="dashboard-subtitle">Amsterdam ID ApartHotel Sauna Management</p>
         <div class="auto-monitor-indicator">
           <span class="indicator-dot"></span> Auto-monitoring active
@@ -11,10 +11,20 @@
           </span>
         </div>
       </div>
-      <button class="btn-secondary logout-btn" @click="logout">
-        <span class="btn-icon">🚪</span>
-        Logout
-      </button>
+      <div class="header-actions">
+        <router-link v-if="isAdmin" to="/admin/dashboard" class="btn-primary admin-btn">
+          <span class="btn-icon">👥</span>
+          Admin Panel
+        </router-link>
+        <button class="btn-secondary password-btn" @click="showPasswordForm = true">
+          <span class="btn-icon">🔑</span>
+          Change Password
+        </button>
+        <button class="btn-secondary logout-btn" @click="logout">
+          <span class="btn-icon">🚪</span>
+          Logout
+        </button>
+      </div>
     </div>
     
     <!-- Sauna Status Card -->
@@ -142,6 +152,65 @@
         />
       </div>
     </div>
+    
+    <!-- Password Change Modal -->
+    <div v-if="showPasswordForm" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Change Password</h3>
+          <button class="modal-close" @click="showPasswordForm = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input 
+              id="current-password"
+              v-model="passwordData.currentPassword" 
+              type="password" 
+              placeholder="Enter your current password"
+              class="form-control"
+            >
+          </div>
+          <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input 
+              id="new-password"
+              v-model="passwordData.newPassword" 
+              type="password" 
+              placeholder="Enter your new password"
+              class="form-control"
+            >
+          </div>
+          <div class="form-group">
+            <label for="confirm-password">Confirm New Password</label>
+            <input 
+              id="confirm-password"
+              v-model="passwordData.confirmPassword" 
+              type="password" 
+              placeholder="Confirm your new password"
+              class="form-control"
+            >
+          </div>
+
+          <div v-if="passwordError" class="error-message">
+            <div class="error-icon">⚠️</div>
+            <div>{{ passwordError }}</div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-danger" @click="showPasswordForm = false">Cancel</button>
+            <button 
+              class="btn-primary" 
+              @click="changePassword" 
+              :disabled="!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword"
+            >
+              Update Password
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-overlay" @click="showPasswordForm = false"></div>
+    </div>
   </div>
 </template>
 
@@ -159,6 +228,12 @@ export default {
     EmployeeBookingForm,
     SaunaStatus
   },
+  computed: {
+    isAdmin() {
+      const authStore = useAuthStore()
+      return authStore.role === 'admin'
+    }
+  },
   data() {
     return {
       bookings: [],
@@ -169,8 +244,15 @@ export default {
       currentBooking: null,
       showBookingForm: false,
       showOutOfOrderForm: false,
+      showPasswordForm: false,
       outOfOrderReason: '',
-      lastChecked: null
+      lastChecked: null,
+      passwordData: {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      },
+      passwordError: null
     }
   },
   computed: {
@@ -281,7 +363,6 @@ export default {
             this.parseTime(a.time) - this.parseTime(b.time)
           )[0]
           
-          console.log(`Auto-starting booking for ${earliestBooking.guest_name}`)
           this.startSession(earliestBooking)
         }
       }
@@ -293,7 +374,6 @@ export default {
         
         if (this.currentBooking.date === today && 
             endTimeMinutes <= currentTimeMinutes) {
-          console.log(`Auto-completing booking for ${this.currentBooking.guest_name}`)
           this.completeSession()
         }
       }
@@ -308,7 +388,6 @@ export default {
           this.checkBookingStatuses()
         })
         .catch((error) => {
-          console.log(error)
           if (error.response?.status === 401) {
             this.logout()
           }
@@ -331,7 +410,7 @@ export default {
             this.checkBookingStatuses()
           }
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     loadCurrentBooking(bookingId) {
       return axios.get(`/bookings/${bookingId}`)
@@ -340,7 +419,6 @@ export default {
           return res.data
         })
         .catch((error) => {
-          console.log(error)
           return null
         })
     },
@@ -360,7 +438,7 @@ export default {
           this.loadSaunaStatus()
           this.loadBookings()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     completeSession() {
       axios.put(`/bookings/${this.currentBooking.id}`, {
@@ -374,7 +452,7 @@ export default {
           this.loadSaunaStatus()
           this.loadBookings()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     cancelSession() {
       axios.put(`/bookings/${this.currentBooking.id}`, {
@@ -388,7 +466,7 @@ export default {
           this.loadSaunaStatus()
           this.loadBookings()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     cancelBooking(booking) {
       if (confirm(`Are you sure you want to cancel the booking for ${booking.guest_name}?`)) {
@@ -398,7 +476,7 @@ export default {
           .then(() => {
             this.loadBookings()
           })
-          .catch((error) => console.log(error))
+          .catch((error) => {})
       }
     },
     setOutOfOrder() {
@@ -414,7 +492,7 @@ export default {
           this.outOfOrderReason = ''
           this.loadSaunaStatus()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     setAvailable() {
       axios.put('/sauna/status', {
@@ -424,12 +502,51 @@ export default {
         .then(() => {
           this.loadSaunaStatus()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {})
     },
     onBookingCreated(booking) {
       this.showBookingForm = false
       this.loadBookings()
     },
+    changePassword() {
+      this.passwordError = null
+      
+      // Validate password inputs
+      if (!this.passwordData.currentPassword || !this.passwordData.newPassword || !this.passwordData.confirmPassword) {
+        this.passwordError = 'All fields are required'
+        return
+      }
+      
+      if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
+        this.passwordError = 'New passwords do not match'
+        return
+      }
+      
+      if (this.passwordData.newPassword.length < 6) {
+        this.passwordError = 'New password must be at least 6 characters'
+        return
+      }
+      
+      // Make API request to change password
+      axios.put('/users/change-password', {
+        currentPassword: this.passwordData.currentPassword,
+        newPassword: this.passwordData.newPassword
+      })
+        .then(() => {
+          alert('Password changed successfully')
+          this.showPasswordForm = false
+          this.passwordData = {
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }
+        })
+        .catch(error => {
+          
+          this.passwordError = error.response?.data?.error || 'Failed to change password. Please check your current password.'
+        })
+    },
+    
     logout() {
       // Use the auth store for logout
       const authStore = useAuthStore()
@@ -442,7 +559,6 @@ export default {
   mounted() {
     // Check authentication using the auth store
     const authStore = useAuthStore()
-    authStore.autoLogin()
     
     if (!authStore.loggedIn) {
       this.$router.push('/employee')
@@ -534,6 +650,23 @@ export default {
   }
 }
 
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.admin-btn {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.password-btn,
 .logout-btn {
   display: flex;
   align-items: center;
@@ -759,8 +892,9 @@ textarea:focus {
     width: 100%;
   }
   
-  .logout-btn {
-    align-self: flex-end;
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 
@@ -769,7 +903,12 @@ textarea:focus {
     align-items: center;
   }
   
-  .logout-btn {
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .admin-btn, .logout-btn {
     align-self: center;
     width: 100%;
     justify-content: center;

@@ -242,14 +242,21 @@ export default {
       
       axios.get('/bookings')
         .then((res) => {
+          // Check if response data is an array, if not use empty array
+          const bookingsData = Array.isArray(res.data) ? res.data : []
+          
           // Filter bookings for the selected date
-          this.bookedSlots = res.data.filter(booking => 
-            booking.date === this.booking.date && 
+          this.bookedSlots = bookingsData.filter(booking => 
+            booking && booking.date === this.booking.date && 
             booking.status === 'active'
           )
           this.updateAvailableTimes()
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {
+          // Set empty array on error
+          this.bookedSlots = []
+          this.updateAvailableTimes()
+        })
     },
     updateAvailableTimes() {
       const allTimes = this.generateTimeSlots()
@@ -416,7 +423,6 @@ export default {
         .catch((error) => {
           this.isSubmitting = false
           this.error = error.response?.data?.error || 'An error occurred'
-          console.log(error)
         })
     },
     resetForm() {

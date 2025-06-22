@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia'
 import axios from '../axios-auth'
 
+// Auth store following Lecture 6F pattern
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     username: '',
-    token: ''
+    token: '',
+    role: ''
   }),
   getters: {
     loggedIn: (state) => state.username !== '',
-    getToken: (state) => state.token
+    getToken: (state) => state.token,
+    isAdmin: (state) => state.role === 'admin'
   },
   actions: {
     login(username, password) {
@@ -18,31 +21,32 @@ export const useAuthStore = defineStore('auth', {
           password: password,
         })
         .then((res) => {
-          this.username = res.data.username;
-          this.token = res.data.jwt;
-          axios.defaults.headers.common['Authorization'] = "Bearer " + res.data.jwt;
-          localStorage.setItem('token', res.data.jwt);
-          localStorage.setItem('username', res.data.username);
-          resolve()
+          if (res.data && res.data.jwt) {
+            this.username = res.data.username || username;
+            this.token = res.data.jwt;
+            this.role = res.data.role || 'employee';
+            axios.defaults.headers.common['Authorization'] = "Bearer " + res.data.jwt;
+            resolve()
+          } else {
+            reject(new Error('Invalid login response'))
+          }
         })
-        .catch((error) => reject(error));
+        .catch((error) => {
+          reject(error)
+        });
       });
     },
     logout() {
       this.username = '';
       this.token = '';
+      this.role = '';
       axios.defaults.headers.common['Authorization'] = '';
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
     },
+    // Since we're not using localStorage, we can't autoLogin from previous sessions
+    // This method is kept to maintain compatibility with existing code
     autoLogin() {
-      const token = localStorage.getItem('token');
-      const username = localStorage.getItem('username');
-      if (token && username) {
-        axios.defaults.headers.common["Authorization"] = "Bearer " + token;
-        this.token = token;
-        this.username = username;
-      }
+      // No implementation needed as we don't use localStorage
+      return false;
     }
   }
 })

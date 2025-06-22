@@ -8,6 +8,8 @@
       <nav>
         <router-link to="/">Guest Booking</router-link>
         <router-link to="/employee">Employee Login</router-link>
+        <router-link v-if="isLoggedIn && isAdmin" to="/admin/dashboard">Admin Panel</router-link>
+        <router-link v-else-if="isLoggedIn" to="/employee/dashboard">Dashboard</router-link>
       </nav>
     </header>
     <main>
@@ -24,6 +26,16 @@ import { useAuthStore } from './stores/auth'
 
 export default {
   name: 'App',
+  computed: {
+    isLoggedIn() {
+      const authStore = useAuthStore()
+      return authStore.loggedIn
+    },
+    isAdmin() {
+      const authStore = useAuthStore()
+      return authStore.role === 'admin'
+    }
+  },
   mounted() {
     // Try to automatically log in when the app starts
     const authStore = useAuthStore()

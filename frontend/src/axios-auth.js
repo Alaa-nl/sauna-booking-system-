@@ -1,26 +1,11 @@
 import axios from 'axios'
 
+// Following the Lecture 6F pattern with /api prefix
 const instance = axios.create({
-  baseURL: 'http://localhost/'
-})
-
-// Add a request interceptor to handle authentication errors
-instance.interceptors.response.use(
-  response => response,
-  error => {
-    // Handle 401 errors (Unauthorized)
-    if (error.response && error.response.status === 401) {
-      // Clear local storage
-      localStorage.removeItem('token')
-      localStorage.removeItem('username')
-      
-      // If not on the login page, redirect to login
-      if (window.location.pathname !== '/employee') {
-        window.location.href = '/employee'
-      }
-    }
-    return Promise.reject(error)
+  baseURL: 'http://localhost/api',
+  headers: {
+    'Content-Type': 'application/json'
   }
-)
+});
 
-export default instance
+export default instance;

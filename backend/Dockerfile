@@ -18,4 +18,4 @@ RUN docker-php-ext-install -j$(nproc) gd
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /app
