@@ -6,34 +6,25 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./backend/app:/app
-
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./app:/app
   php:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: PHP.Dockerfile
     working_dir: /app
     volumes:
-      - ./backend/app:/app
-    environment:
-      DB_HOST: mysql
-      DB_NAME: sauna_booking_system
-      DB_USER: sauna_user
-      DB_PASSWORD: sauna_password
-      DB_CHARSET: utf8mb4
-      JWT_SECRET: your_jwt_secret_key_change_in_production
-
+      - ./app:/app
   mysql:
     image: mariadb:latest
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_USER: sauna_user
-      MYSQL_PASSWORD: sauna_password
-      MYSQL_DATABASE: sauna_booking_system
+      MYSQL_ROOT_PASSWORD: secret123
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: developmentdb
     volumes:
       - mysqldata:/var/lib/mysql
-      - ./backend/sql:/docker-entrypoint-initdb.d
+      - ./sql:/docker-entrypoint-initdb.d
     ports:
       - 3306:3306
 
@@ -41,18 +32,10 @@ services:
     image: phpmyadmin:latest
     environment:
       PMA_HOST: mysql
-      PMA_USER: sauna_user
-      PMA_PASSWORD: sauna_password
+      PMA_USER: root
+      PMA_PASSWORD: secret123
     ports:
       - 8080:80
-    depends_on:
-      - mysql
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   mysqldata: {}

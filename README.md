@@ -1,41 +1,56 @@
-# Amsterdam ID ApartHotel Sauna Booking System
+# PHP Web Development Boilerplate
 
-A web application for managing sauna bookings at Amsterdam ID ApartHotel.
+## About
 
-## Features
-- Guest booking interface with 30-minute time slots
-- Employee management dashboard with real-time status tracking
-- Excel export functionality for booking data
-- Booking confirmation system with details and instructions
+This repo contains some starter code for new PHP API projects.
 
-## Technologies
-- PHP Backend (MVC architecture)
-- Vue.js 3 Frontend with Options API
-- MySQL Database
-- Docker deployment
+What's included:
 
-## Setup Instructions
-1. Clone this repository
-2. Run `docker-compose up`
-3. Access the application at http://localhost
+- Docker setup including:
+  - PHP interpreter
+  - NGINX server
+  - MySQL (MariaDB) database
+  - PHP MyAdmin
+- A directory structure organized around the MVC pattern
+- Composer
+- Autoload setup
 
-## User Interfaces
+## Usage
 
-### Guest Interface
-- Simple booking form (no login required)
-- Date and time selection with 30-minute slots
-- Room number and guest information entry
-- Booking confirmation with instructions
+- Start local
 
-### Employee Interface
-- Staff login system
-- Real-time sauna status monitoring
-- Advanced booking management (create, start, complete, cancel)
-- Booking history with Excel export
-- Extended booking options (24-hour access, variable duration)
+In a terminal, from the cloned/forked/download project folder, run:
 
-## Technical Details
-- JWT authentication for employee access
-- RESTful API endpoints
-- Mobile-responsive design
-- Docker-based development and deployment
+```bash
+docker compose up
+```
+
+NGINX will now serve files in the app/public folder. Visit localhost in your browser to check.
+PHPMyAdmin is accessible on localhost:8080
+
+If you want to stop the containers, press Ctrl+C.
+
+Or run:
+
+```bash
+docker compose down
+```
+
+## Composer commands
+
+- to run composer commands, `docker compose run php composer [arguments]`
+- i.e. to install the QR code library (already done): `docker compose run php composer require chillerlan/php-qrcode`
+
+## Important files
+
+- The entry point for the application is `app/public/index.php`. Start there and trace the control flow through the routes, controllers and models
+- `insomnia_article_collection.json` can be imported into [Insomnia](https://insomnia.rest/) for API testing
+
+## Code Architecture
+
+The code follows an MVC pattern. Here is an outline of the code structure:
+
+- `public/index.php` - the main entry point of the application with initialization and routes.
+- `controllers` - responsible for logic
+- `models` - responsible for database CRUD
+- `services` - various self contained services. These are primarily used by the controllers and can contain logic for small local services or for interacting with external services (mail send, external apis, etc.).
