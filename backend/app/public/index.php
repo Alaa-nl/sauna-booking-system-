@@ -23,11 +23,13 @@ use Steampixel\Route;
 use App\Controllers\UserController;
 use App\Controllers\BookingController;
 use App\Controllers\SaunaController;
+use App\Controllers\ProductController;
 
 // Initialize controllers
 $userController = new UserController();
 $bookingController = new BookingController();
 $saunaController = new SaunaController();
+$productController = new ProductController();
 
 // User routes - following the exact pattern from lectures
 Route::add('/users/login', function() use ($userController) {
@@ -92,6 +94,27 @@ Route::add('/sauna/status', function() use ($saunaController) {
 Route::add('/bookings/([0-9]+)/qrcode', function($id) use ($bookingController) {
     $bookingController->getQrCode($id);
 }, 'get');
+
+// Product routes - implementing the required endpoints
+Route::add('/products', function() use ($productController) {
+    $productController->getAll();
+}, 'get');
+
+Route::add('/products/([0-9]+)', function($id) use ($productController) {
+    $productController->getOne($id);
+}, 'get');
+
+Route::add('/products', function() use ($productController) {
+    $productController->create();
+}, 'post');
+
+Route::add('/products/([0-9]+)', function($id) use ($productController) {
+    $productController->update($id);
+}, 'put');
+
+Route::add('/products/([0-9]+)', function($id) use ($productController) {
+    $productController->delete($id);
+}, 'delete');
 
 // Handle 404 errors
 Route::pathNotFound(function() {
