@@ -16,7 +16,6 @@ class ResponseService
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data);
-        exit();
     }
 
     /**
@@ -73,7 +72,6 @@ class ResponseService
         // Handle preflight OPTIONS request
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             http_response_code(204);
-            exit();
         }
     }
 }

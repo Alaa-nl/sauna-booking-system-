@@ -22,22 +22,25 @@ class UserController extends Controller
     public function login()
     {
         try {
-            // Get data from request
-            $data = $this->decodePostData();
-            $this->validateInput(["username", "password"], $data);
+            // 1. Get credentials from request
+            $credentials = $this->decodePostData();
             
-            // Call service method to check username/password
-            $user = $this->userService->checkUsernamePassword($data["username"], $data["password"]);
+            // 2. Validate required fields
+            $this->validateInput(["username", "password"], $credentials);
             
+            // 3. Authenticate user
+            $user = $this->userService->authenticate($credentials);
+            
+            // 4. Handle failed authentication
             if (!$user) {
                 ResponseService::Error("Invalid credentials", 401);
                 return;
             }
             
-            // Generate JWT token
+            // 5. Generate JWT token
             $tokenResponse = $this->userService->generateJwt($user);
             
-            // Return JSON response
+            // 6. Return JWT in response
             ResponseService::Send($tokenResponse);
         } catch (\Exception $e) {
             ResponseService::Error("Login failed: " . $e->getMessage(), 500);
@@ -47,6 +50,7 @@ class UserController extends Controller
     /**
      * Get all users (admin only)
      * GET /users
+     * Support pagination with ?limit=10&offset=0 query parameters
      */
     public function getAll()
     {
@@ -54,11 +58,15 @@ class UserController extends Controller
             // Require admin access
             $this->requireAdmin();
             
-            // Get all users
-            $users = $this->userService->getAllUsers();
+            // Get pagination parameters
+            $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : null;
+            $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : null;
             
-            // Return JSON response
-            ResponseService::Send($users);
+            // Get users with pagination
+            $result = $this->userService->getAllUsers($limit, $offset);
+            
+            // Return JSON response with pagination metadata
+            ResponseService::Send($result);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
         }
@@ -110,9 +118,9 @@ class UserController extends Controller
             }
             
             // Update user
-            $success = $this->userService->updateUser($id, $data);
+            $result = $this->userService->updateUser($id, $data);
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("User not found or no changes made", 404);
                 return;
             }
@@ -139,9 +147,9 @@ class UserController extends Controller
             $this->validateInput(["password"], $data);
             
             // Reset password
-            $success = $this->userService->resetPassword($id, $data["password"]);
+            $result = $this->userService->resetPassword($id, $data["password"]);
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("User not found", 404);
                 return;
             }
@@ -168,13 +176,13 @@ class UserController extends Controller
             $this->validateInput(["currentPassword", "newPassword"], $data);
             
             // Change password
-            $success = $this->userService->changePassword(
+            $result = $this->userService->changePassword(
                 $user->id, 
                 $data["currentPassword"], 
                 $data["newPassword"]
             );
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("Password change failed - current password incorrect", 400);
                 return;
             }
@@ -203,9 +211,9 @@ class UserController extends Controller
             }
             
             // Delete user
-            $success = $this->userService->deleteUser($id);
+            $result = $this->userService->deleteUser($id);
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("User not found", 404);
                 return;
             }

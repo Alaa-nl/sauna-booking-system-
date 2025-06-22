@@ -19,18 +19,23 @@ class BookingController extends Controller
     /**
      * Get all bookings (authenticated)
      * GET /bookings
+     * Support pagination with ?limit=10&offset=0 query parameters
      */
     public function getAll()
     {
         try {
-            // Require authentication
+            // 1. Verify authentication
             $this->requireAuth();
             
-            // Get all bookings
-            $bookings = $this->bookingService->getAllBookings();
+            // 2. Get pagination parameters
+            $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : null;
+            $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : null;
             
-            // Return JSON response
-            ResponseService::Send($bookings);
+            // 3. Call service method with pagination
+            $result = $this->bookingService->getAllBookings($limit, $offset);
+            
+            // 4. Return JSON response with pagination metadata
+            ResponseService::Send($result);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
         }
@@ -43,13 +48,13 @@ class BookingController extends Controller
     public function getOne($id)
     {
         try {
-            // Require authentication
+            // 1. Verify authentication
             $this->requireAuth();
             
-            // Get booking by ID
+            // 2. Call service method
             $booking = $this->bookingService->getBookingById($id);
             
-            // Return JSON response
+            // 3. Return JSON response
             ResponseService::Send($booking);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
@@ -63,30 +68,16 @@ class BookingController extends Controller
     public function getQrCode($id)
     {
         try {
-            // Require authentication
+            // 1. Verify authentication
             $this->requireAuth();
             
-            // Get booking by ID
+            // 2. Call service methods
             $booking = $this->bookingService->getBookingById($id);
+            $qrHtml = $this->bookingService->generateBookingQrCode($booking);
             
-            // Generate QR code HTML
-            $qrCode = QrCodeService::CreateHtmlPreviewImage(json_encode([
-                'id' => $booking['id'],
-                'guest' => $booking['guest_name'],
-                'date' => $booking['date'],
-                'time' => $booking['time'],
-                'duration' => $booking['duration']
-            ]));
-            
-            // Send QR code HTML (not JSON)
+            // 3. Return HTML response
             header('Content-Type: text/html; charset=utf-8');
-            echo '<div style="text-align: center; margin: 20px;">';
-            echo '<h2>Booking QR Code</h2>';
-            echo '<div>Booking #' . $booking['id'] . ' - ' . $booking['guest_name'] . '</div>';
-            echo '<div>' . $booking['date'] . ' at ' . $booking['time'] . '</div>';
-            echo '<div style="margin: 20px;">' . $qrCode . '</div>';
-            echo '</div>';
-            exit();
+            echo $qrHtml;
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
         }
@@ -99,23 +90,19 @@ class BookingController extends Controller
     public function create()
     {
         try {
-            // Get data from request
+            // 1. Get data from request
             $data = $this->decodePostData();
             
-            // Validate required fields
-            $requiredFields = ['guest_name', 'date', 'time', 'room_number', 'people'];
-            $this->validateInput($requiredFields, $data);
-            
-            // For employee bookings, add the created_by field
+            // 2. Attach authenticated user if available
             $user = $this->getAuthenticatedUser();
             if ($user) {
                 $data['created_by'] = $user->username;
             }
             
-            // Create booking
+            // 3. Call service method
             $booking = $this->bookingService->createBooking($data);
             
-            // Return success response
+            // 4. Return JSON response
             ResponseService::Send($booking, 201);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
@@ -129,16 +116,16 @@ class BookingController extends Controller
     public function update($id)
     {
         try {
-            // Require authentication
+            // 1. Verify authentication
             $this->requireAuth();
             
-            // Get data from request
+            // 2. Get data from request
             $data = $this->decodePostData();
             
-            // Update booking
-            $success = $this->bookingService->updateBooking($id, $data);
+            // 3. Call service method
+            $this->bookingService->updateBooking($id, $data);
             
-            // Return success response
+            // 4. Return JSON response
             ResponseService::Send(["message" => "Booking updated successfully"]);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);
@@ -152,13 +139,13 @@ class BookingController extends Controller
     public function delete($id)
     {
         try {
-            // Require authentication
+            // 1. Verify authentication
             $this->requireAuth();
             
-            // Delete booking
-            $success = $this->bookingService->deleteBooking($id);
+            // 2. Call service method
+            $this->bookingService->deleteBooking($id);
             
-            // Return success response
+            // 3. Return JSON response
             ResponseService::Send(["message" => "Booking deleted successfully"]);
         } catch (\Exception $e) {
             ResponseService::Error($e->getMessage(), $e->getCode() ?: 500);

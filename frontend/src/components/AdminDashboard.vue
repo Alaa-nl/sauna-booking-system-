@@ -70,7 +70,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Add New Employee</h3>
-          <button class="modal-close" @click="showAddForm = false">&times;</button>
+          <button class="modal-close" @click="!formLoading && (showAddForm = false)">&times;</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -106,18 +106,19 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-danger" @click="showAddForm = false">Cancel</button>
+            <button class="btn-danger" @click="showAddForm = false" :disabled="formLoading">Cancel</button>
             <button 
               class="btn-primary" 
               @click="addEmployee" 
-              :disabled="!newUser.username || !newUser.password"
+              :disabled="!newUser.username || !newUser.password || formLoading"
             >
-              Add Employee
+              <span v-if="formLoading" class="btn-loader"></span>
+              <span v-else>Add Employee</span>
             </button>
           </div>
         </div>
       </div>
-      <div class="modal-overlay" @click="showAddForm = false"></div>
+      <div class="modal-overlay" @click="!formLoading && (showAddForm = false)"></div>
     </div>
 
     <!-- Reset Password Modal -->
@@ -125,7 +126,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Reset Password</h3>
-          <button class="modal-close" @click="showResetForm = false">&times;</button>
+          <button class="modal-close" @click="!formLoading && (showResetForm = false)">&times;</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -145,18 +146,19 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-danger" @click="showResetForm = false">Cancel</button>
+            <button class="btn-danger" @click="showResetForm = false" :disabled="formLoading">Cancel</button>
             <button 
               class="btn-primary" 
               @click="confirmResetPassword" 
-              :disabled="!resetPasswordData.password"
+              :disabled="!resetPasswordData.password || formLoading"
             >
-              Reset Password
+              <span v-if="formLoading" class="btn-loader"></span>
+              <span v-else>Reset Password</span>
             </button>
           </div>
         </div>
       </div>
-      <div class="modal-overlay" @click="showResetForm = false"></div>
+      <div class="modal-overlay" @click="!formLoading && (showResetForm = false)"></div>
     </div>
 
     <!-- Confirmation Dialog -->
@@ -164,24 +166,44 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>Confirm Action</h3>
-          <button class="modal-close" @click="showConfirmation = false">&times;</button>
+          <button class="modal-close" @click="!confirmationLoading && (showConfirmation = false)">&times;</button>
         </div>
         <div class="modal-body">
           <p>{{ confirmationMessage }}</p>
           <div class="modal-actions">
-            <button class="btn-secondary" @click="showConfirmation = false">Cancel</button>
-            <button class="btn-danger" @click="confirmAction">Confirm</button>
+            <button class="btn-secondary" @click="showConfirmation = false" :disabled="confirmationLoading">Cancel</button>
+            <button class="btn-danger" @click="confirmAction" :disabled="confirmationLoading">
+              <span v-if="confirmationLoading" class="btn-loader"></span>
+              <span v-else>Confirm</span>
+            </button>
           </div>
         </div>
       </div>
-      <div class="modal-overlay" @click="showConfirmation = false"></div>
+      <div class="modal-overlay" @click="!confirmationLoading && (showConfirmation = false)"></div>
     </div>
+  </div>
+  <!-- Success Toast -->
+  <div v-if="showSuccess" class="toast toast-success">
+    <div class="toast-content">
+      <span class="toast-icon">✓</span>
+      <span>{{ successMessage }}</span>
+    </div>
+    <button class="toast-close" @click="showSuccess = false">&times;</button>
+  </div>
+  
+  <!-- Error Toast -->
+  <div v-if="showError" class="toast toast-error">
+    <div class="toast-content">
+      <span class="toast-icon">⚠️</span>
+      <span>{{ errorMessage }}</span>
+    </div>
+    <button class="toast-close" @click="showError = false">&times;</button>
   </div>
 </template>
 
 <script>
-import axios from '../axios-auth'
 import { useAuthStore } from '../stores/auth'
+import AuthService from '../services/AuthService'
 
 export default {
   name: 'AdminDashboard',
@@ -194,6 +216,12 @@ export default {
       showResetForm: false,
       showConfirmation: false,
       formError: null,
+      formLoading: false,
+      confirmationLoading: false,
+      showSuccess: false,
+      successMessage: '',
+      showError: false,
+      errorMessage: '',
       newUser: {
         username: '',
         password: '',
@@ -216,22 +244,51 @@ export default {
     }
   },
   methods: {
+    /**
+     * Display a success toast message
+     */
+    showSuccessMessage(message) {
+      this.successMessage = message
+      this.showSuccess = true
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        this.showSuccess = false
+      }, 3000)
+    },
+    
+    /**
+     * Display an error toast message
+     */
+    showErrorMessage(message) {
+      this.errorMessage = message
+      this.showError = true
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        this.showError = false
+      }, 5000)
+    },
     loadUsers() {
       this.loading = true
       this.error = null
       
-      axios.get('/users')
+      AuthService.getAllUsers()
         .then(response => {
           this.users = response.data
           this.loading = false
         })
         .catch(error => {
-          this.error = error.response?.data?.error || 'Failed to load users'
           this.loading = false
           
           if (error.response?.status === 403) {
             this.error = 'Access denied. Admin privileges required.'
+          } else if (error.response?.status === 401) {
+            this.error = 'Authentication expired. Please log in again.'
+            // Redirect to login page
+            this.logout()
+          } else {
+            this.error = error.response?.data?.error || 'Failed to load users. Please try again.'
           }
+          console.error('Error loading users:', error)
         })
     },
     
@@ -243,7 +300,8 @@ export default {
         return
       }
       
-      axios.post('/users', this.newUser)
+      this.formLoading = true
+      AuthService.createUser(this.newUser.username, this.newUser.password, this.newUser.role)
         .then(() => {
           this.showAddForm = false
           this.newUser = {
@@ -251,10 +309,20 @@ export default {
             password: '',
             role: 'employee'
           }
+          this.formLoading = false
+          this.showSuccessMessage('Employee added successfully')
           this.loadUsers()
         })
         .catch(error => {
-          this.formError = error.response?.data?.error || 'Failed to create user'
+          this.formLoading = false
+          if (error.response?.status === 403) {
+            this.formError = 'Access denied. Admin privileges required.'
+          } else if (error.response?.status === 409) {
+            this.formError = 'Username already exists. Please choose another username.'
+          } else {
+            this.formError = error.response?.data?.error || 'Failed to create user. Please try again.'
+          }
+          console.error('Error creating user:', error)
         })
     },
     
@@ -275,19 +343,27 @@ export default {
         return
       }
       
-      axios.put(`/users/${this.resetPasswordData.userId}/reset-password`, {
-        password: this.resetPasswordData.password
-      })
+      this.formLoading = true
+      AuthService.resetPassword(this.resetPasswordData.userId, this.resetPasswordData.password)
         .then(() => {
           this.showResetForm = false
           this.resetPasswordData = {
             userId: null,
             password: ''
           }
-          alert('Password reset successfully')
+          this.formLoading = false
+          this.showSuccessMessage('Password reset successfully')
         })
         .catch(error => {
-          this.formError = error.response?.data?.error || 'Failed to reset password'
+          this.formLoading = false
+          if (error.response?.status === 403) {
+            this.formError = 'Access denied. Admin privileges required.'
+          } else if (error.response?.status === 404) {
+            this.formError = 'User not found. They may have been deleted.'
+          } else {
+            this.formError = error.response?.data?.error || 'Failed to reset password. Please try again.'
+          }
+          console.error('Error resetting password:', error)
         })
     },
     
@@ -304,15 +380,32 @@ export default {
     confirmDeleteUser() {
       if (!this.userToDelete) return
       
-      axios.delete(`/users/${this.userToDelete}`)
+      this.confirmationLoading = true
+      AuthService.deleteUser(this.userToDelete)
         .then(() => {
           this.showConfirmation = false
           this.userToDelete = null
+          this.confirmationLoading = false
+          this.showSuccessMessage('User deleted successfully')
           this.loadUsers()
         })
         .catch(error => {
-          alert(error.response?.data?.error || 'Failed to delete user')
+          this.confirmationLoading = false
           this.showConfirmation = false
+          
+          let errorMessage = 'Failed to delete user';
+          if (error.response?.status === 403) {
+            errorMessage = 'Access denied. Admin privileges required.'
+          } else if (error.response?.status === 404) {
+            errorMessage = 'User not found. They may have been deleted already.'
+          } else if (error.response?.status === 400) {
+            errorMessage = error.response.data?.error || 'Cannot delete your own account'
+          } else {
+            errorMessage = error.response?.data?.error || 'Failed to delete user. Please try again.'
+          }
+          
+          this.showErrorMessage(errorMessage)
+          console.error('Error deleting user:', error)
         })
     },
     
@@ -339,8 +432,7 @@ export default {
     
     this.currentUsername = authStore.username
     
-    // Set auth header
-    axios.defaults.headers.common['Authorization'] = 'Bearer ' + authStore.getToken
+    // Auth header will be set by axios interceptor
     
     // Load users
     this.loadUsers()
@@ -624,6 +716,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.btn-loader {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spinner 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: white;
@@ -659,6 +762,70 @@ button:disabled {
   background-color: var(--danger-dark, #c82333);
   transform: translateY(-1px);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Toast styling */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  min-width: 300px;
+  max-width: 400px;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2000;
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+.toast-success {
+  background-color: var(--success, #28a745);
+  color: white;
+}
+
+.toast-error {
+  background-color: var(--danger);
+  color: white;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toast-icon {
+  font-size: 1.25rem;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: white;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-left: 1rem;
+  font-size: 1.25rem;
+  transition: opacity 0.2s ease;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Responsive design */

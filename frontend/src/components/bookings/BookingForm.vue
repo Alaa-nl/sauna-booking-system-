@@ -153,7 +153,7 @@
 </template>
 
 <script>
-import axios from '../axios-auth'
+import axios from '@/axios-auth'
 
 export default {
   name: 'BookingForm',
@@ -234,26 +234,25 @@ export default {
       
       return times
     },
-    loadBookedSlots() {
+    async loadBookedSlots() {
       if (!this.booking.date) return
       
-      axios.get('/bookings')
-        .then((res) => {
-          // Check if response data is an array, if not use empty array
-          const bookingsData = Array.isArray(res.data) ? res.data : []
-          
-          // Filter bookings for the selected date
-          this.bookedSlots = bookingsData.filter(booking => 
-            booking && booking.date === this.booking.date && 
-            booking.status === 'active'
-          )
-          this.updateAvailableTimes()
-        })
-        .catch((error) => {
-          // Set empty array on error
-          this.bookedSlots = []
-          this.updateAvailableTimes()
-        })
+      try {
+        const response = await axios.get('/bookings')
+        // Check if response data is an array, if not use empty array
+        const bookingsData = Array.isArray(response.data) ? response.data : []
+        
+        // Filter bookings for the selected date
+        this.bookedSlots = bookingsData.filter(booking => 
+          booking && booking.date === this.booking.date && 
+          booking.status === 'active'
+        )
+        this.updateAvailableTimes()
+      } catch (error) {
+        // Set empty array on error
+        this.bookedSlots = []
+        this.updateAvailableTimes()
+      }
     },
     updateAvailableTimes() {
       const allTimes = this.generateTimeSlots()
@@ -359,7 +358,7 @@ export default {
       
       this.roomNumberError = ''
     },
-    submitBooking() {
+    async submitBooking() {
       this.isSubmitting = true
       this.error = ''
       
@@ -392,35 +391,34 @@ export default {
         bookingData.created_by = this.username
       }
       
-      axios.post('/bookings', bookingData)
-        .then((res) => {
-          this.isSubmitting = false
-          
-          if (this.isEmployee) {
-            // For employee, emit an event that the parent component can listen to
-            this.$emit('booking-created', res.data)
-            this.resetForm()
-          } else {
-            // For guest, redirect to confirmation page
-            this.$router.push({ 
-              path: '/confirmation', 
-              query: { 
-                id: res.data.id,
-                name: this.booking.guestName,
-                date: this.booking.date,
-                time: this.booking.time,
-                endTime: this.calculateEndTime(this.booking.time, this.booking.duration),
-                roomNumber: this.booking.roomNumber,
-                people: this.booking.people,
-                duration: this.booking.duration
-              }
-            })
-          }
-        })
-        .catch((error) => {
-          this.isSubmitting = false
-          this.error = error.response?.data?.error || 'An error occurred'
-        })
+      try {
+        const response = await axios.post('/bookings', bookingData)
+        this.isSubmitting = false
+        
+        if (this.isEmployee) {
+          // For employee, emit an event that the parent component can listen to
+          this.$emit('booking-created', response.data)
+          this.resetForm()
+        } else {
+          // For guest, redirect to confirmation page
+          this.$router.push({ 
+            path: '/confirmation', 
+            query: { 
+              id: response.data.id,
+              name: this.booking.guestName,
+              date: this.booking.date,
+              time: this.booking.time,
+              endTime: this.calculateEndTime(this.booking.time, this.booking.duration),
+              roomNumber: this.booking.roomNumber,
+              people: this.booking.people,
+              duration: this.booking.duration
+            }
+          })
+        }
+      } catch (error) {
+        this.isSubmitting = false
+        this.error = error.response?.data?.error || 'An error occurred'
+      }
     },
     resetForm() {
       this.booking = {

@@ -166,12 +166,6 @@ export default {
       const today = new Date().toISOString().split('T')[0];
       return date === today;
     },
-    startSession(booking) {
-      this.$emit('start-session', booking);
-    },
-    cancelBooking(booking) {
-      this.$emit('cancel-booking', booking);
-    },
     formatDate(dateString) {
       if (!dateString) return '';
       

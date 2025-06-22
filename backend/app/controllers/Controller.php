@@ -25,7 +25,7 @@ class Controller
         foreach ($expectedFields as $field) {
             if (!isset($data[$field])) {
                 ResponseService::Error("Required field: $field, is missing", 400);
-                exit();
+                return false;
             }
         }
     }
@@ -41,7 +41,7 @@ class Controller
             return json_decode(file_get_contents('php://input'), true);
         } catch (\Throwable $th) {
             ResponseService::Error("Error decoding JSON in request body", 400);
-            exit();
+            return false;
         }
     }
 
@@ -95,7 +95,7 @@ class Controller
     {
         $user = $this->getAuthenticatedUser();
         if (!$user) {
-            exit(); // checkForJwt already sent error response
+            return false; // checkForJwt already sent error response
         }
         return $user;
     }
@@ -110,7 +110,7 @@ class Controller
         $user = $this->requireAuth();
         if ($user->role !== 'admin') {
             ResponseService::Error("Admin access required", 403);
-            exit();
+            return false;
         }
         return $user;
     }

@@ -46,4 +46,63 @@ instance.interceptors.response.use(
   }
 );
 
+/**
+ * Wrapper for making GET requests
+ * @param {string} url - The URL to request
+ * @param {object} params - Optional query parameters
+ * @returns {Promise} - The axios promise
+ */
+export const fetchData = async (url, params = {}) => {
+  try {
+    const response = await instance.get(url, { params });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Wrapper for making POST requests
+ * @param {string} url - The URL to request
+ * @param {object} data - The data to send
+ * @returns {Promise} - The axios promise
+ */
+export const createData = async (url, data) => {
+  try {
+    const response = await instance.post(url, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Wrapper for making PUT requests
+ * @param {string} url - The URL to request
+ * @param {object} data - The data to send
+ * @returns {Promise} - The axios promise
+ */
+export const updateData = async (url, data) => {
+  try {
+    const response = await instance.put(url, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Wrapper for making DELETE requests
+ * @param {string} url - The URL to request
+ * @returns {Promise} - The axios promise
+ */
+export const deleteData = async (url) => {
+  try {
+    const response = await instance.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default instance;

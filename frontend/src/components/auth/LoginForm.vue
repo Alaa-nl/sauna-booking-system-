@@ -62,10 +62,10 @@
 </template>
 
 <script>
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '@/stores/auth'
 
 export default {
-  name: 'EmployeeLogin',
+  name: 'LoginForm',
   data() {
     return {
       username: '',
@@ -75,33 +75,31 @@ export default {
     }
   },
   methods: {
-    login() {
+    async login() {
       this.isLoading = true
       this.errorMessage = ''
       
       const authStore = useAuthStore()
       
-      
-      authStore.login(this.username, this.password)
-        .then(() => {
-          this.isLoading = false
-          // Navigate to dashboard
-          this.$router.push('/employee/dashboard')
-        })
-        .catch((error) => {
-          this.isLoading = false
-          
-          if (error.message === 'Network Error') {
-            this.errorMessage = 'Cannot connect to server. Please check your connection.'
-          } else if (error.response) {
-            // Server responded with error
-            this.errorMessage = error.response.data?.error || 
-                               `Error ${error.response.status}: ${error.response.statusText}`
-          } else {
-            // Default error message
-            this.errorMessage = error.message || 'Invalid username or password'
-          }
-        })
+      try {
+        await authStore.login(this.username, this.password)
+        this.isLoading = false
+        // Navigate to dashboard
+        this.$router.push('/employee/dashboard')
+      } catch (error) {
+        this.isLoading = false
+        
+        if (error.message === 'Network Error') {
+          this.errorMessage = 'Cannot connect to server. Please check your connection.'
+        } else if (error.response) {
+          // Server responded with error
+          this.errorMessage = error.response.data?.error || 
+                             `Error ${error.response.status}: ${error.response.statusText}`
+        } else {
+          // Default error message
+          this.errorMessage = error.message || 'Invalid username or password'
+        }
+      }
     }
   },
   mounted() {

@@ -14,34 +14,72 @@ class UserService
         $this->userRepository = new UserRepository();
     }
     
-    public function checkUsernamePassword($username, $password)
+    /**
+     * Authenticate a user with username and password
+     * 
+     * @param array $credentials Array containing username and password
+     * @return array|false User data if authenticated, false otherwise
+     * @throws \Exception If authentication process fails
+     */
+    public function authenticate($credentials)
     {
         try {
+            // Extract credentials
+            $username = $credentials['username'];
+            $password = $credentials['password'];
+            
+            // Find user by username
             $user = $this->userRepository->findByUsername($username);
             
+            // Check if user exists
             if (!$user) {
                 return false;
             }
             
+            // Verify password
             if (!password_verify($password, $user["password"])) {
                 return false;
             }
             
+            // Return user data without password
+            unset($user['password']);
             return $user;
         } catch (\Exception $e) {
             throw new \Exception("Authentication error: " . $e->getMessage());
         }
     }
     
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use authenticate() instead
+     */
+    public function checkUsernamePassword($username, $password)
+    {
+        return $this->authenticate([
+            'username' => $username,
+            'password' => $password
+        ]);
+    }
+    
+    /**
+     * Generate JWT token for authenticated user
+     * 
+     * @param array $user User data array
+     * @return array Token response with JWT, username and role
+     */
     public function generateJwt($user)
     {
+        // Get JWT settings from environment
         $secret_key = $_ENV["JWT_SECRET"];
         $issuer = "sauna_booking_api";
         $audience = "sauna_booking_client";
+        
+        // Set token timing parameters
         $issuedAt = time();
         $notBefore = $issuedAt;
-        $expire = $issuedAt + 1800; // 30 minutes
+        $expire = $issuedAt + 3600; // 1 hour token validity
         
+        // Build JWT payload
         $payload = [
             "iss" => $issuer,
             "aud" => $audience,
@@ -55,7 +93,10 @@ class UserService
             ]
         ];
         
+        // Generate JWT token
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
+        
+        // Return token response
         return [
             "jwt" => $jwt, 
             "username" => $user["username"],
@@ -63,10 +104,33 @@ class UserService
         ];
     }
     
-    public function getAllUsers()
+    /**
+     * Get all users with optional pagination
+     * 
+     * @param int|null $limit Maximum number of users to return
+     * @param int|null $offset Number of users to skip
+     * @return array List of users and pagination metadata
+     * @throws \Exception If retrieval fails
+     */
+    public function getAllUsers($limit = null, $offset = null)
     {
         try {
-            return $this->userRepository->getAll();
+            // Get total count for pagination metadata
+            $totalCount = $this->userRepository->getCount();
+            
+            // Get paginated users
+            $users = $this->userRepository->getAll($limit, $offset);
+            
+            // Return data with pagination metadata
+            return [
+                'data' => $users,
+                'pagination' => [
+                    'total' => $totalCount,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => $limit ? ($offset + $limit < $totalCount) : false
+                ]
+            ];
         } catch (\Exception $e) {
             throw new \Exception("Error retrieving users: " . $e->getMessage());
         }

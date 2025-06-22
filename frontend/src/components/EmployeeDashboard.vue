@@ -228,12 +228,6 @@ export default {
     EmployeeBookingForm,
     SaunaStatus
   },
-  computed: {
-    isAdmin() {
-      const authStore = useAuthStore()
-      return authStore.role === 'admin'
-    }
-  },
   data() {
     return {
       bookings: [],

@@ -99,9 +99,9 @@ class ProductController extends Controller
             $data = $this->decodePostData();
             
             // Update product
-            $success = $this->productService->updateProduct($id, $data);
+            $result = $this->productService->updateProduct($id, $data);
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("Product not found or no changes made", 404);
                 return;
             }
@@ -127,9 +127,9 @@ class ProductController extends Controller
             $this->requireAdmin();
             
             // Delete product
-            $success = $this->productService->deleteProduct($id);
+            $result = $this->productService->deleteProduct($id);
             
-            if (!$success) {
+            if (!$result) {
                 ResponseService::Error("Product not found", 404);
                 return;
             }

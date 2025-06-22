@@ -119,15 +119,13 @@ Route::add('/products/([0-9]+)', function($id) use ($productController) {
 // Handle 404 errors
 Route::pathNotFound(function() {
     http_response_code(404);
-    echo json_encode(["error" => "Endpoint not found"]);
-    exit();
+    ResponseService::Error("Endpoint not found", 404);
 });
 
 // Handle method not allowed
 Route::methodNotAllowed(function() {
     http_response_code(405);
-    echo json_encode(["error" => "Method not allowed"]);
-    exit();
+    ResponseService::Error("Method not allowed", 405);
 });
 
 // Run the router

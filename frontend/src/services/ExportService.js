@@ -10,7 +10,6 @@ class ExportService {
    */
   exportToExcel(bookings, type) {
     if (!bookings || bookings.length === 0) {
-      console.error('No bookings to export');
       return;
     }
 
