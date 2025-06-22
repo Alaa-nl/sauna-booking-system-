@@ -158,7 +158,8 @@ export default {
       bookings: [],
       saunaStatus: {
         status: 'available',
-        reason: null
+        reason: '',
+        booking_id: null
       },
       currentBooking: null,
       showBookingForm: false,
@@ -218,33 +219,60 @@ export default {
     loadBookings() {
       axios.get('/bookings')
         .then((res) => {
-          this.bookings = res.data
+          // Make sure we have a valid array response
+          this.bookings = Array.isArray(res.data) ? res.data : []
         })
         .catch((error) => {
           console.log(error)
           if (error.response?.status === 401) {
             this.logout()
+          } else {
+            // If API error, set empty array
+            this.bookings = []
           }
         })
     },
     loadSaunaStatus() {
       axios.get('/sauna/status')
         .then((res) => {
-          this.saunaStatus = res.data
-          
-          // If status is busy, find the current booking
-          if (this.saunaStatus.status === 'busy' && this.saunaStatus.booking_id) {
-            this.loadCurrentBooking(this.saunaStatus.booking_id)
+          if (res.data && typeof res.data === 'object') {
+            // Ensure default values for missing properties
+            this.saunaStatus = {
+              status: res.data.status || 'available',
+              reason: res.data.reason || '',
+              booking_id: res.data.booking_id || null
+            }
+            
+            // If status is busy, find the current booking
+            if (this.saunaStatus.status === 'busy' && this.saunaStatus.booking_id) {
+              this.loadCurrentBooking(this.saunaStatus.booking_id)
+            }
           }
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {
+          console.log(error)
+          // On error, reset to default status
+          this.saunaStatus = {
+            status: 'available',
+            reason: '',
+            booking_id: null
+          }
+        })
     },
     loadCurrentBooking(bookingId) {
+      if (!bookingId) {
+        this.currentBooking = null
+        return
+      }
+      
       axios.get(`/bookings/${bookingId}`)
         .then((res) => {
-          this.currentBooking = res.data
+          this.currentBooking = res.data || null
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {
+          console.log(error)
+          this.currentBooking = null
+        })
     },
     startSession(booking) {
       // First update the booking status to "in_use"

@@ -79,6 +79,7 @@ export default {
     status: {
       type: String,
       required: true,
+      default: 'available',
       validator: value => ['available', 'busy', 'out_of_order'].includes(value)
     },
     reason: {
