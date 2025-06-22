@@ -1,0 +1,41 @@
+# PHP
+/app/vendor/
+/app/.env
+.env
+*.log
+composer.phar
+
+# Vue/Node
+/frontend/node_modules/
+/frontend/.env
+/frontend/dist/
+/frontend/npm-debug.log
+/frontend/yarn-debug.log
+/frontend/yarn-error.log
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Database
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# System files
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# IDE files
+/.idea/
+/shelf/
+/workspace.xml
+/dataSources/
+/dataSources.local.xml
+/httpRequests/
+/.vscode/
+*.sublime-project
+*.sublime-workspace
