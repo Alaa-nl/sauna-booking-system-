@@ -4,6 +4,12 @@
       <div class="dashboard-title">
         <h2>Employee Dashboard</h2>
         <p class="dashboard-subtitle">Amsterdam ID ApartHotel Sauna Management</p>
+        <div class="auto-monitor-indicator">
+          <span class="indicator-dot"></span> Auto-monitoring active
+          <span v-if="lastChecked" class="last-checked">
+            (Last checked: {{ formatLastChecked() }})
+          </span>
+        </div>
       </div>
       <button class="btn-secondary logout-btn" @click="logout">
         <span class="btn-icon">🚪</span>
@@ -163,7 +169,8 @@ export default {
       currentBooking: null,
       showBookingForm: false,
       showOutOfOrderForm: false,
-      outOfOrderReason: ''
+      outOfOrderReason: '',
+      lastChecked: null
     }
   },
   computed: {
@@ -215,10 +222,90 @@ export default {
     }
   },
   methods: {
+    parseTime(timeString) {
+      if (!timeString) return null
+      
+      // Convert time string (e.g. "14:30") to minutes since midnight
+      const [hours, minutes] = timeString.substring(0, 5).split(':').map(Number)
+      return hours * 60 + minutes
+    },
+    
+    getCurrentTimeInMinutes() {
+      const now = new Date()
+      return now.getHours() * 60 + now.getMinutes()
+    },
+    
+    formatLastChecked() {
+      if (!this.lastChecked) return ''
+      
+      const now = new Date()
+      const diff = now - this.lastChecked
+      
+      // If less than a minute ago
+      if (diff < 60000) {
+        return 'just now'
+      }
+      
+      // If less than an hour ago
+      if (diff < 3600000) {
+        const minutes = Math.floor(diff / 60000)
+        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+      }
+      
+      // Otherwise show the time
+      return this.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    },
+    
+    checkBookingStatuses() {
+      // Update last checked time
+      this.lastChecked = new Date()
+      
+      // Get current date and time
+      const today = new Date().toISOString().split('T')[0]
+      const currentTimeMinutes = this.getCurrentTimeInMinutes()
+      
+      // Check for bookings that should be automatically started
+      if (this.saunaStatus.status === 'available') {
+        // Find bookings that should start now
+        const bookingsToStart = this.bookings.filter(booking => 
+          booking.date === today && 
+          booking.status === 'active' &&
+          this.parseTime(booking.time) <= currentTimeMinutes &&
+          this.parseTime(booking.time) + 5 >= currentTimeMinutes // Within 5 minute window
+        )
+        
+        // If there's a booking to start automatically, start the earliest one
+        if (bookingsToStart.length > 0) {
+          // Sort by time to get the earliest
+          const earliestBooking = [...bookingsToStart].sort((a, b) => 
+            this.parseTime(a.time) - this.parseTime(b.time)
+          )[0]
+          
+          console.log(`Auto-starting booking for ${earliestBooking.guest_name}`)
+          this.startSession(earliestBooking)
+        }
+      }
+      
+      // Check for active sessions that should be automatically completed
+      if (this.saunaStatus.status === 'busy' && this.currentBooking) {
+        const endTimeMinutes = this.parseTime(this.currentBooking.time) + 
+          (this.currentBooking.duration * 60)
+        
+        if (this.currentBooking.date === today && 
+            endTimeMinutes <= currentTimeMinutes) {
+          console.log(`Auto-completing booking for ${this.currentBooking.guest_name}`)
+          this.completeSession()
+        }
+      }
+    },
+    
     loadBookings() {
       axios.get('/bookings')
         .then((res) => {
           this.bookings = res.data
+          
+          // After loading bookings, check if any need to be auto-started/completed
+          this.checkBookingStatuses()
         })
         .catch((error) => {
           console.log(error)
@@ -235,16 +322,27 @@ export default {
           // If status is busy, find the current booking
           if (this.saunaStatus.status === 'busy' && this.saunaStatus.booking_id) {
             this.loadCurrentBooking(this.saunaStatus.booking_id)
+              .then(() => {
+                // After loading current booking, check if it should be auto-completed
+                this.checkBookingStatuses()
+              })
+          } else {
+            // If sauna is available, check if any booking should be auto-started
+            this.checkBookingStatuses()
           }
         })
         .catch((error) => console.log(error))
     },
     loadCurrentBooking(bookingId) {
-      axios.get(`/bookings/${bookingId}`)
+      return axios.get(`/bookings/${bookingId}`)
         .then((res) => {
           this.currentBooking = res.data
+          return res.data
         })
-        .catch((error) => console.log(error))
+        .catch((error) => {
+          console.log(error)
+          return null
+        })
     },
     startSession(booking) {
       // First update the booking status to "in_use"
@@ -357,6 +455,19 @@ export default {
     // Load initial data
     this.loadBookings()
     this.loadSaunaStatus()
+    
+    // Start automatic status checking
+    this.checkBookingStatuses()
+    this.statusCheckInterval = setInterval(() => {
+      this.checkBookingStatuses()
+    }, 30000) // Check every 30 seconds
+  },
+  
+  beforeDestroy() {
+    // Clear interval when component is destroyed
+    if (this.statusCheckInterval) {
+      clearInterval(this.statusCheckInterval)
+    }
   }
 }
 </script>
@@ -382,6 +493,45 @@ export default {
 .dashboard-subtitle {
   color: var(--text-medium);
   margin-top: 0.25rem;
+}
+
+.auto-monitor-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--success);
+  margin-top: 0.5rem;
+}
+
+.last-checked {
+  margin-left: 6px;
+  color: var(--text-medium);
+  font-size: 0.7rem;
+}
+
+.indicator-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--success);
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
 }
 
 .logout-btn {
