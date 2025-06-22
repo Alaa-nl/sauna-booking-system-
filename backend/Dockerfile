@@ -41,6 +41,28 @@ RUN mkdir -p /app/logs \
     && chown -R www-data:www-data /app \
     && chmod -R 775 /app
 
+# Set user to root temporarily for better install permissions
+USER root
+
+# Copy application files
+COPY --chown=www-data:www-data ./app /app
+
+# Install dependencies
+RUN cd /app && composer install --no-dev --optimize-autoloader --no-interaction
+
+# Copy custom PHP-FPM configuration
+COPY php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Set proper permissions and switch back to www-data
+RUN chown -R www-data:www-data /app \
+    && find /app -type d -exec chmod 755 {} \; \
+    && find /app -type f -exec chmod 644 {} \; \
+    && chmod -R 775 /app/logs
+
+# Create logs directory
+RUN mkdir -p /var/log/php \
+    && chown -R www-data:www-data /var/log/php
+
 # Set non-root user for better security
 USER www-data
 

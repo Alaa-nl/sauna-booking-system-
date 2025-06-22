@@ -57,8 +57,8 @@ class ResponseService
             header("Access-Control-Allow-Origin: http://localhost");
         }
         
-        // Always enable credentials
-        header("Access-Control-Allow-Credentials: true");
+        // Disable credentials for JWT auth without cookies
+        header("Access-Control-Allow-Credentials: false");
         
         // Allow specific methods
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");

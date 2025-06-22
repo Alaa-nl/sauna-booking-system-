@@ -2,11 +2,12 @@ import axios from 'axios'
 
 // Create axios instance with appropriate configuration
 const instance = axios.create({
-  baseURL: 'http://localhost/api',
+  // Use relative URL to avoid CORS issues
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true
+  withCredentials: false // Set to false for simple JWT auth without cookies
 });
 
 // Add request interceptor to include the JWT token in requests

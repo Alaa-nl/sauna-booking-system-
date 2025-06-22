@@ -11,8 +11,12 @@ services:
       - ./backend/app:/app
     restart: unless-stopped
     depends_on:
-      - php
-      - frontend
+      php:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
     networks:
       - frontend-network
       - backend-network
@@ -30,6 +34,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend/app:/app
+      - ./backend/healthcheck.php:/app/healthcheck.php
     environment:
       DB_HOST: mysql
       DB_NAME: sauna_booking_system
@@ -42,15 +47,16 @@ services:
       JWT_EXPIRY: "1800"
     restart: unless-stopped
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "php", "-r", "if(file_get_contents('http://localhost/index.php') === false) {exit(1);}"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "php", "/app/healthcheck.php"]
+      interval: 10s
+      timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   mysql:
     image: mariadb:latest
